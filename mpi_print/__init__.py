@@ -20,7 +20,7 @@ in a script or module:
 The builtin print function is still accessible as `mpi_print.builtin_print`.
 """
 
-__version__ = "0.0.0"
+__version__ = "0.1.0"
 
 
 from mpi4py import MPI
