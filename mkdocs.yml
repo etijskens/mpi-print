@@ -1,0 +1,14 @@
+site_name: The mpi-print package
+
+theme:
+  name: "material"
+
+plugins:
+  - mkdocstrings
+  - search
+  - autorefs
+
+nav:
+  - Quick start: index.md
+  - API reference: api-reference.md
+  - readme.md

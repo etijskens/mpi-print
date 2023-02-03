@@ -1,23 +1,29 @@
 # -*- coding: utf-8 -*-
 
 """
-Package mpi_print
-=================
+The `mpi_print` module exports:
 
-Top-level package for mpi_print.
+- `print`, a decorated version of the builtin `print` function. It first prints its arguments,
+  preceded by a line identifying the MPI rank of the printing proces, and a timestamp.
+- `builtin_print`, a reference to the builtin `print` function.
+- `mpi_rank`, a function returning the MPI rank of the current proces.
 
-This module decorates the builtin print function to first print an empty line, a line
-`MPI rank: <mpi rank of the current process> [timestamp <datetime.now()>]`
-and then executes the print statement. In this way it is clear which rank prints what.
+## Typical use
 
-To use the decorated print function instead of the builtin print put this import statement
-in a script or module:
+```
+    >>> from mpi_print import print         # mpi_print_decorator(print)
+    >>> from mpi_print import builtin_print # the builtin print, as is.
+    >>> builtin_print("Hello, world.")
+    Hello, world.
+    >>> print("Hello, world.")
 
-.. code-block:: python
-
-    from mpi_print import print
-
-The builtin print function is still accessible as `mpi_print.builtin_print`.
+    MPI rank: 0 [timestamp: 2023-02-02 20:48:26.544420]
+    Hello, world.
+    >>> from mpi_print import mpi_rank
+    >>> mpi_rank()
+    0
+    >>>
+```
 """
 
 __version__ = "0.1.0"
@@ -28,22 +34,25 @@ import io
 from pathlib import Path
 from datetime import datetime
 
-# remember the undecorated print function
 builtin_print = print
 
 
 def mpi_rank() -> int:
-    """Convenience funtion that retrieves the rank of the current process."""
+    """Convenience function that retrieves the rank of the current process.
+
+    Returns:
+        The rank of the current process.
+    """
     return MPI.COMM_WORLD.Get_rank()
 
 
-def mpi_decorator(func):
-    """A decorator for the builtin print function that first prints a message identifying the printing rank."""
+def _mpi_print_decorator(func):
+    """A decorator for the builtin print function that first prints a message identifying
+    the printing rank and a timestamp.
 
-    # Remark: The wrapper executes two separate calls to builtin_print.
-    # That leaves the possibility that the two lines get separated in the output,
-    # thus obscuring what is printed by which rank.
-    # We first print to a string and than print the string to stdout.
+    (For internal use only).
+    """
+
     def wrapper(*args, **kwargs):
         # remember the 'file' keyword argument if present, to make printing to file and StringIO, ... work too.
         if 'file' in kwargs:
@@ -53,6 +62,9 @@ def mpi_decorator(func):
             file = None
 
         output = io.StringIO()
+        # We first print to a string and than print the string to stdout. This is to avoid
+        # that different print calls get separated in the output because several ranks may
+        # bne writing simultaneously.
         builtin_print(f"\nMPI rank: {mpi_rank()} [timestamp: {datetime.now()}]\n"
                       , *args, file=output, **kwargs)
         # probhibit that the line following 'MPI rank: <rank>' starts with a space.
@@ -63,9 +75,9 @@ def mpi_decorator(func):
 
 
 # Decorate the builtin print function and use it as the default print.
-# The undecorated function is still accessible as builtin_print from this module.
 # The decorated print funtion accepts all the same arguments.
-print = mpi_decorator(builtin_print)
+# The undecorated function is still accessible as builtin_print from this module.
+print = _mpi_print_decorator(builtin_print)
 
 
 
